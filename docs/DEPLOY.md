@@ -20,6 +20,13 @@ The database is a **new MySQL database** (for example a second database on the
 same Aiven server, `event_v2`). The Node database is only **read**, once, by the import.
 Media stay where they are (S3 + CloudFront): no files move.
 
+### Smaller start: one service
+
+Instead of the blueprint, one **Web Service** (Docker, this repository) can run everything:
+set `RUN_QUEUE=true` and `RUN_SCHEDULER=true` on it, `QUEUE_CONNECTION=database` and
+`CACHE_STORE=database` (no Redis needed). Add the worker / scheduler / Redis services later
+when traffic grows. The chat relay is still its own (Node) service.
+
 ## 1. Before the day (developer)
 
 1. Put this folder under git and push it to GitHub (it is not a repository yet).

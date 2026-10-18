@@ -36,7 +36,9 @@ ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
     FFMPEG_PATH=/usr/bin/ffmpeg \
-    PORT=8080
+    PORT=8080 \
+    RUN_QUEUE=false \
+    RUN_SCHEDULER=false
 
 EXPOSE 8080
 CMD ["start"]
