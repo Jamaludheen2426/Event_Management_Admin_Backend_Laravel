@@ -1,0 +1,16 @@
+{
+  "name": "event-chat-socket",
+  "version": "1.0.0",
+  "private": true,
+  "description": "socket.io relay for chat; Laravel owns all chat data",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.5"
+  }
+}

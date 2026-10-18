@@ -1,0 +1,197 @@
+# Render blueprint for the Laravel API (docs/DEPLOY.md walks through it).
+#
+# Five services, one image for the three PHP ones:
+#   event-api        web: nginx + php-fpm, /api/v1/*, health check /up
+#   event-worker     the queue (push, e-mail, translations)
+#   event-scheduler  due messages and notices, every minute
+#   event-chat       chat-socket relay (Node, socket.io)
+#   event-redis      cache + queue + locks
+#
+# Secrets are `sync: false`: Render asks for them on the first sync and
+# never stores them in this file.
+
+envVarGroups:
+  - name: event-api-shared
+    envVars:
+      - key: APP_NAME
+        value: Event Management API
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: info
+      # The NEW database (built by migrations), not the Node one.
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      # The Node database, read once by `php artisan legacy:import` at cutover.
+      - key: LEGACY_DB_SSL
+        value: "true"
+      - key: LEGACY_DB_HOST
+        sync: false
+      - key: LEGACY_DB_PORT
+        sync: false
+      - key: LEGACY_DB_DATABASE
+        sync: false
+      - key: LEGACY_DB_USERNAME
+        sync: false
+      - key: LEGACY_DB_PASSWORD
+        sync: false
+      - key: CACHE_STORE
+        value: redis
+      - key: QUEUE_CONNECTION
+        value: redis
+      - key: SESSION_DRIVER
+        value: array
+      - key: REDIS_CLIENT
+        value: predis
+      - key: HOUSE_COMPANY_ID
+        value: "1"
+      - key: HOUSE_VENDOR_ID
+        value: "1"
+      - key: FRONTEND_URL
+        sync: false
+      - key: PUBLIC_SITE_ROOT_DOMAINS
+        sync: false
+      # Must be derived from the secret the Node API used, or printed QR codes stop working.
+      - key: EVENT_QR_KEY
+        sync: false
+      - key: FILESYSTEM_DISK
+        value: s3
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_DEFAULT_REGION
+        value: ap-south-1
+      - key: AWS_BUCKET
+        sync: false
+      - key: AWS_URL
+        sync: false
+      - key: MAIL_MAILER
+        value: configured
+      - key: MYMEMORY_EMAIL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: FACEBOOK_APP_ID
+        sync: false
+      - key: FACEBOOK_APP_SECRET
+        sync: false
+      - key: OAUTH_CALLBACK_BASE_URL
+        sync: false
+      - key: MSG91_WA_AUTHKEY
+        sync: false
+      - key: MSG91_WA_NUMBER
+        sync: false
+      - key: MSG91_OTP_TEMPLATE
+        sync: false
+      - key: MSG91_OTP_ENABLED
+        sync: false
+      - key: MSG91_SMS_AUTHKEY
+        sync: false
+      - key: MSG91_SMS_FLOW_ID
+        sync: false
+      - key: MSG91_SMS_OTP_ENABLED
+        sync: false
+      - key: CHAT_SOCKET_URL
+        sync: false
+      - key: CHAT_SOCKET_SECRET
+        sync: false
+
+services:
+  - type: web
+    name: event-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: starter
+    healthCheckPath: /up
+    envVars:
+      - fromGroup: event-api-shared
+      - key: APP_ROLE
+        value: web
+      # true for the first deploy and at cutover; migrations then run on start.
+      - key: RUN_MIGRATIONS
+        value: "true"
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: event-redis
+          property: connectionString
+
+  - type: worker
+    name: event-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: starter
+    envVars:
+      - fromGroup: event-api-shared
+      - key: APP_ROLE
+        value: worker
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: event-redis
+          property: connectionString
+
+  - type: worker
+    name: event-scheduler
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: starter
+    envVars:
+      - fromGroup: event-api-shared
+      - key: APP_ROLE
+        value: scheduler
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: event-redis
+          property: connectionString
+
+  - type: web
+    name: event-chat
+    runtime: node
+    rootDir: chat-socket
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    region: singapore
+    plan: starter
+    envVars:
+      # The API's public URL (https://event-api.onrender.com or your domain).
+      - key: LARAVEL_URL
+        sync: false
+      - key: CHAT_SOCKET_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+
+  - type: keyvalue
+    name: event-redis
+    region: singapore
+    plan: starter
+    maxmemoryPolicy: noeviction
+    ipAllowList: []

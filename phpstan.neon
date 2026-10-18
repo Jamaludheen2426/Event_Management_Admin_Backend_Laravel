@@ -1,0 +1,23 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 6
+    paths:
+        - app
+    tmpDir: storage/framework/phpstan
+
+    # Modules keep their own migrations; Larastan reads columns from these.
+    databaseMigrationsPath:
+        - database/migrations
+        - app/Core/Database/Migrations
+        - app/Modules/Platform/Database/Migrations
+        - app/Modules/Identity/Database/Migrations
+        - app/Modules/Vendors/Database/Migrations
+        - app/Modules/Catalog/Database/Migrations
+        - app/Modules/Templates/Database/Migrations
+        - app/Modules/Clients/Database/Migrations
+        - app/Modules/Billing/Database/Migrations
+        - app/Modules/Events/Database/Migrations
+
+    ignoreErrors:
