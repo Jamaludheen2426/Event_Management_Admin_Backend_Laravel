@@ -30,6 +30,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // sessions, activity log) and https come from the X-Forwarded-* headers.
         $middleware->trustProxies(at: env('TRUSTED_PROXIES', '*'));
 
+        // An API has no login page: a signed-out request always gets the JSON 401
+        // (v1), also when it did not ask for JSON (a browser, curl).
+        $middleware->redirectGuestsTo(static fn (): ?string => null);
+
         // Two CORS policies (public site vs. cookie-carrying portals) — see config/cors.php.
         $middleware->replace(HandleCors::class, Cors::class);
 

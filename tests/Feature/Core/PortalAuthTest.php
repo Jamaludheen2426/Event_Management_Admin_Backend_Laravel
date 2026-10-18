@@ -87,3 +87,9 @@ it('binds route models only inside the caller\'s tenant', function () {
         ->assertNotFound()
         ->assertJson(['success' => false, 'message' => 'Resource not found']);
 });
+
+it('answers 401 JSON, not a login redirect, when a browser (no JSON Accept header) calls a signed-in route', function () {
+    // A browser or curl does not ask for JSON; there is no login page to send it to.
+    $this->get('/api/v1/auth/me')->assertUnauthorized()
+        ->assertJson(['success' => false, 'message' => 'Authentication required. Please login.']);
+});
